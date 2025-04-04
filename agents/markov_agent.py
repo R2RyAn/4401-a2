@@ -55,12 +55,12 @@ class MarkovAgent(ProbabilityAgent):
             self._thoughts = thoughts_two
         else:
             self.reset_thoughts()
-        print("\n==================")
-        print(f"[DEBUG] Mice: {state.get_mouse_locations()}")
-        print("[🧠 Your Thoughts]")
-        for pos in sorted(self._thoughts):
-            print(f"{pos}: {self._thoughts[pos]:.16f}")
-        print("==================\n")
+        # print("\n==================")
+        # print(f"[DEBUG] Mice: {state.get_mouse_locations()}")
+        # print("[🧠 Your Thoughts]")
+        # for pos in sorted(self._thoughts):
+        #     print(f"{pos}: {self._thoughts[pos]:.16f}")
+        # print("==================\n")
 
     def predict(self, state):
         # --- Step A: Choose a target mouse if not set or lost ---
@@ -116,12 +116,12 @@ class MarkovAgent(ProbabilityAgent):
 
         self._thoughts = final_thoughts
 
-        # --- Debug output ---
-        print("\n==================")
-        print(f"[DEBUG] Mice: {state.get_mouse_locations()}")
-        print(f"[DEBUG] Chasing mouse: {self._target_mouse}")
-        print("[🧠 Your Thoughts]")
-        for pos in sorted(self._thoughts):
-            print(f"{pos}: {self._thoughts[pos]:.16f}")
-        print("==================\n")
+        # # --- Debug output ---
+        # print("\n==================")
+        # print(f"[DEBUG] Mice: {state.get_mouse_locations()}")
+        # print(f"[DEBUG] Chasing mouse: {self._target_mouse}")
+        # print("[🧠 Your Thoughts]")
+        # for pos in sorted(self._thoughts):
+        #     print(f"{pos}: {self._thoughts[pos]:.16f}")
+        # print("==================\n")
 
