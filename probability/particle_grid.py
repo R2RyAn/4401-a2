@@ -1,3 +1,4 @@
+import math
 from collections import Counter
 from .distribution_model import DistributionModel
 
@@ -17,19 +18,14 @@ class ParticleGrid:
         # Initialize the particle distribution Counter
         self._particle_distribution = Counter()
 
-        # Compute how many particles should be placed at each valid position
-        particles_per_position = self._particle_count // len(self._valid_positions)
+        # Calculate how many particles should be placed at each valid position
+        particles_per_position = math.floor(self._particle_count / len(self._valid_positions))
 
         # Distribute particles evenly across all valid positions
         for position in self._valid_positions:
             self._particle_distribution[position] = particles_per_position
 
-        # Optional: Print the normalized distribution in the test case format
-        # formatted = [
-        #     [[pos[0], pos[1]], self._particle_distribution[pos] / self._particle_count]
-        #     for pos in sorted(self._valid_positions)
-        # ]
-        # print(f'"solution Normal": {formatted}')
+
 
     def reweight_particles(self, distribution):
         # Qustion 4, your reweight particles implementation goes here.
@@ -39,21 +35,20 @@ class ParticleGrid:
         # For sampling use DistributionModel.sample_distribution(distribution, sample_amount) which will
         # return a list of legal positions got by sampling the given distribution.
 
-        # Step 1: Sample from the given distribution
+        #Sample from the given distribution
         sampled_positions = DistributionModel.sample_distribution(distribution, self._particle_count)
 
-        # Step 2: Count how many times each position was sampled (i.e. build new particle distribution)
+        #Count how many times each position was sampled
         self._particle_distribution = Counter(sampled_positions)
 
-        # Step 3: Normalize the counter so it becomes a probability distribution
+        #Normalize the counter so it becomes a probability distribution
         DistributionModel.normalize(self._particle_distribution)
 
-        # Print the normalized distribution (no need to divide by particle_count again)
-        formatted = [
-            [[pos[0], pos[1]], self._particle_distribution[pos]]
-            for pos in sorted(self._valid_positions, key=lambda x: (x[0], x[1]))
-        ]
-        print(f'"solution Weighted": {formatted}')
+        # Ensure all valid positions have entries in the counter, even if their count is 0
+        for pos in self._valid_positions:
+            if pos not in self._particle_distribution:
+                self._particle_distribution[pos] = 0.0
+
 
     def get_particle_distribution(self):
         return self._particle_distribution

@@ -29,99 +29,105 @@ class MarkovAgent(ProbabilityAgent):
     # Remember to normalize before updating the agents thoughts and to look over only valid positions (use self._valid_positions).
 
     def listen(self, state):
-        flag = True
 
-        # Step 1: Update the echo grid with the current state (get new mouse sounds)
+        # Update the echo grid with the current state
         self._echo_grid.update(state)
 
-        # Step 2: Get the echo distribution (where the sounds are coming from)
+        # Call the echo grid to get the echo distribution
         echo_dist = self._echo_grid.get_echo_distribution()
 
-        # Step 3: If echo contains no useful info, reset thoughts to uniform
 
+        # if echo_dist is all 0, there is no new information, meaning we must reset our thoughts
         if all(val == 0 for val in echo_dist.values()):
             self.reset_thoughts()
             return
 
-        # Step 4: Create a new belief map by combining echo info with current beliefs Bayesian Style
-        thoughts_two = Counter()
+        # Create a new Couter for the new thoughts which will be a multiplication of the echo distribution and the current thoughts (Bayesian)
+        thoughts_2 = Counter()
+        # Make sure we are going over all valid position
         for value in self._valid_positions:
-            thoughts_two[value] = self._thoughts[value] * echo_dist[value]
+            thoughts_2[value] = self._thoughts[value] * echo_dist[value]
 
-        # Step 5: Normalize and update the agent's thoughts
-        total = sum(thoughts_two.values())
+        # Sum up the new values in thought_two
+        total = sum(thoughts_2.values())
+
+        # Make sure the total is larger than 0, if it is then normalize the distribution, if it isn't then reset the thoughts
         if total > 0:
-            DistributionModel.normalize(thoughts_two)
-            self._thoughts = thoughts_two
+            DistributionModel.normalize(thoughts_2)
+            self._thoughts = thoughts_2
         else:
             self.reset_thoughts()
-        # print("\n==================")
-        # print(f"[DEBUG] Mice: {state.get_mouse_locations()}")
-        # print("[🧠 Your Thoughts]")
-        # for pos in sorted(self._thoughts):
-        #     print(f"{pos}: {self._thoughts[pos]:.16f}")
-        # print("==================\n")
+
 
     def predict(self, state):
-        # --- Step A: Choose a target mouse if not set or lost ---
+        # We have to first pick one mouse to chase
         mice = state.get_mouse_locations()
+
+        # Make sure there is a mouse on the board
         if mice:
-            self._target_mouse = mice[0]  # choose the first mouse (or choose by some criteria)
+            # Pick the first mouse
+            self._target_mouse = mice[0]
         else:
-            # No mice: reset thoughts and return
+            # If not mouse on the board then return and end program
             self.reset_thoughts()
             return
 
-        # --- Step 1: Time Elapse - Predict mouse movement using movement model ---
-        new_thoughts = Counter()
-        for new_pos in self._valid_positions:
-            prob_at_new_pos = 0
+        # Create a new counter for the new thoughts
+        thought_2 = Counter()
+
+        # Loop over only valid positions
+        for pos_new in self._valid_positions:
+            # Initialize probability for the new position
+            prob = 0
+            # Loop over all valid current positions
             for curr_pos in self._valid_positions:
+                # If the current position has 0 or not probability then skip it
                 if self._thoughts[curr_pos] <= 0:
                     continue
-                movement_dist = DistributionModel.get_movement_distribution(state, curr_pos)
-                prob_at_new_pos += self._thoughts[curr_pos] * movement_dist.get(new_pos, 0)
-            new_thoughts[new_pos] = prob_at_new_pos
 
-        if sum(new_thoughts.values()) > 0:
-            DistributionModel.normalize(new_thoughts)
+                # Get the movement probability distribution from the current position
+                mvmt_dist = DistributionModel.get_movement_distribution(state, curr_pos)
+
+
+                # Update the probability of the new position based on the current poistion, and where it could have come from
+                prob += self._thoughts[curr_pos] * mvmt_dist.get(pos_new, 0)
+
+            # Store the updated probability for the new position in the new counter
+            thought_2[pos_new] = prob
+
+        # Normalize the new thoughts distribution and make sure it is not all 0
+        if sum(thought_2.values()) > 0:
+            DistributionModel.normalize(thought_2)
         else:
             self.reset_thoughts()
-            new_thoughts = self._thoughts.copy()
+            thought_2 = self._thoughts.copy()
 
-        # --- Step 2: Update echo grid and get echo distribution ---
+        # update the thoughts with the new thoughts
         self._echo_grid.update(state)
         echo_dist = self._echo_grid.get_echo_distribution()
 
-        # --- Step 3: Filter echo distribution to focus only on the target mouse ---
-        filtered_echo = Counter()
+        # Make sure you only keep track of the echo distribution at the targeted mouse's position
+        echo_2 = Counter()
         for pos in self._valid_positions:
             # Only keep echo evidence at the target mouse's position; zero elsewhere.
             if pos == self._target_mouse:
-                filtered_echo[pos] = echo_dist[pos]
+                echo_2[pos] = echo_dist[pos]
             else:
-                filtered_echo[pos] = 0
+                echo_2[pos] = 0
 
-        # --- Step 4: Combine time-elapsed beliefs and echo evidence via weighted averaging ---
-        final_thoughts = Counter()
-        prior_weight = 0.4  # weight for time-elapsed beliefs
-        evidence_weight = 0.6  # weight for echo evidence
+        # Combining the new thoughts with the filtered echo distribution
+        thought_3 = Counter()
+        # loop over all valid positions and combine the new thoughts with the echo distribution
         for pos in self._valid_positions:
-            final_thoughts[pos] = (new_thoughts[pos]) + (filtered_echo[pos])
+            thought_3[pos] = thought_2[pos] + echo_2[pos]
 
-        if sum(final_thoughts.values()) > 0:
-            DistributionModel.normalize(final_thoughts)
+        # Normalize the final thoughts distribution
+        if sum(thought_3.values()) > 0:
+            DistributionModel.normalize(thought_3)
         else:
-            final_thoughts = new_thoughts.copy()
+            thought_3 = thought_2.copy()
 
-        self._thoughts = final_thoughts
+        self._thoughts = thought_3
 
-        # # --- Debug output ---
-        # print("\n==================")
-        # print(f"[DEBUG] Mice: {state.get_mouse_locations()}")
-        # print(f"[DEBUG] Chasing mouse: {self._target_mouse}")
-        # print("[🧠 Your Thoughts]")
-        # for pos in sorted(self._thoughts):
-        #     print(f"{pos}: {self._thoughts[pos]:.16f}")
-        # print("==================\n")
+
 
